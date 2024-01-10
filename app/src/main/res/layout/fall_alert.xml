@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/layout/system_alert_layout.xml -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/white">
+
+    <TextView
+        android:id="@+id/alertMessage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Fall detected! Take action now." />
+
+    <TextView
+        android:id="@+id/countdownTimer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Countdown: 10 seconds" />
+
+
+    <Button
+        android:id="@+id/disableButton"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginTop="5dp"
+        android:text="Disable"
+        android:onClick="onDisableButtonClick" />
+</LinearLayout>
