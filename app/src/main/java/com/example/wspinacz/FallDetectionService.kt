@@ -2,8 +2,10 @@ package com.example.wspinacz
 
 import android.app.*
 import android.content.Context
+import android.Manifest
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.PixelFormat
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -15,12 +17,15 @@ import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.IBinder
 import android.provider.Settings
+import android.telephony.SmsManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import kotlin.math.sqrt
 
 class FallDetectionService : Service() {
@@ -37,7 +42,6 @@ class FallDetectionService : Service() {
         super.onCreate()
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-
         if (accelerometer == null) {
             stopSelf()
         } else {
@@ -144,13 +148,14 @@ class FallDetectionService : Service() {
 
 
         // Po prostu timer
-        countdownTimer = object : CountDownTimer(10000, 1000) {
+        countdownTimer = object : CountDownTimer(15500, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 countdownTextView?.text = "Countdown: ${millisUntilFinished / 1000} seconds"
             }
 
             override fun onFinish() {
                 removeSystemAlertWindow()
+                sendSMS("TEST")
             }
         }
         countdownTimer?.start()
@@ -180,4 +185,44 @@ class FallDetectionService : Service() {
         startAccelerometerListener()
     }
 
+
+
+    fun sendSMS(message: String) {
+        val phoneNumber = "123456789"
+
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.SEND_SMS
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            // Permission already granted, proceed with sending SMS
+            sendSmsWithPermissionGranted(phoneNumber, message)
+        } else {
+            println("Do zaimplementowania")
+        }
+    }
+
+    private fun sendSmsWithPermissionGranted(phoneNumber: String, message: String) {
+        val smsManager = SmsManager.getDefault()
+        val piSent = PendingIntent.getBroadcast(this, 0, Intent("SMS_SENT"),
+            PendingIntent.FLAG_IMMUTABLE)
+        val piDelivered = PendingIntent.getBroadcast(this, 0, Intent("SMS_DELIVERED"),
+            PendingIntent.FLAG_IMMUTABLE)
+
+        // Split the message into parts if it's too long
+        val parts = smsManager.divideMessage(message)
+        val messageCount = parts.size
+
+        for (i in 0 until messageCount) {
+            smsManager.sendTextMessage(
+                phoneNumber,
+                null,
+                parts[i],
+                piSent,
+                piDelivered
+            )
+        }
+    }
+
 }
+
