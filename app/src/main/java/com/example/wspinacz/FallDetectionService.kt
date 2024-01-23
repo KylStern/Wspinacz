@@ -11,6 +11,9 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -18,6 +21,7 @@ import android.os.CountDownTimer
 import android.os.IBinder
 import android.provider.Settings
 import android.telephony.SmsManager
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
@@ -34,7 +38,7 @@ class FallDetectionService : Service() {
     private var accelerometer: Sensor? = null
     private var systemAlertView: View? = null
     private var countdownTimer: CountDownTimer? = null
-
+    private var mediaPlayer: MediaPlayer? = null
 
     private val threshold = 40.0f // Adjust this threshold based on your testing
 
@@ -86,6 +90,7 @@ class FallDetectionService : Service() {
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
 
+
         return channelId
     }
 
@@ -127,6 +132,7 @@ class FallDetectionService : Service() {
 
     //Kod do wywołania Alert Boxa
     private fun showSystemAlertWindow() {
+        playAlarmSound()
         val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         val layoutParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -155,13 +161,14 @@ class FallDetectionService : Service() {
 
             override fun onFinish() {
                 removeSystemAlertWindow()
-                sendSMS("TEST")
+                //sendSMS("TEST")
             }
         }
         countdownTimer?.start()
 
         disableButton?.setOnClickListener {
             onDisableButtonClick()
+            stopAlarmSound()
         }
 
         windowManager.addView(systemAlertView, layoutParams)
@@ -183,12 +190,13 @@ class FallDetectionService : Service() {
         removeSystemAlertWindow()
         startForegroundService()
         startAccelerometerListener()
+        stopAlarmSound()
     }
 
 
 
     fun sendSMS(message: String) {
-        val phoneNumber = "123456789"
+        val phoneNumber = "531149432"
 
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -222,6 +230,35 @@ class FallDetectionService : Service() {
                 piDelivered
             )
         }
+    }
+
+    private fun playAlarmSound() {
+        try {
+            // Use the media player to play the alarm sound
+            mediaPlayer = MediaPlayer.create(this, R.raw.alarm_sound)
+
+            // Check if the version is Android 21 or higher, use setAudioAttributes
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                val audioAttributes = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+
+                mediaPlayer?.setAudioAttributes(audioAttributes)
+            } else {
+                // For lower versions, use deprecated setAudioStreamType
+                mediaPlayer?.setAudioStreamType(AudioManager.STREAM_ALARM)
+            }
+
+            // Start the media player
+            mediaPlayer?.start()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+    private fun stopAlarmSound() {
+        mediaPlayer?.release()
+        mediaPlayer = null
     }
 
 }
