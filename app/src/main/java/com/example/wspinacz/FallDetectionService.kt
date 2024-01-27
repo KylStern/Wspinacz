@@ -21,16 +21,27 @@ import android.os.CountDownTimer
 import android.os.IBinder
 import android.provider.Settings
 import android.telephony.SmsManager
+import android.text.TextWatcher
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
+import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.core.widget.doAfterTextChanged
 import kotlin.math.sqrt
+import kotlin.properties.Delegates
+
+var threshold = 40.0f  // threshold of the accelerometer
+var timerTime: Long = 30  // countdown time
+var text_message: String = ""  // text message send for given number
+var phone_number: String = ""  // number to which the phone will send the given message
 
 class FallDetectionService : Service() {
 
@@ -40,10 +51,23 @@ class FallDetectionService : Service() {
     private var countdownTimer: CountDownTimer? = null
     private var mediaPlayer: MediaPlayer? = null
 
-    private val threshold = 40.0f // Adjust this threshold based on your testing
+
+    companion object {
+        const val REQUEST_CODE = 123
+    }
+
+
+
+
+
+
+
+
+
 
     override fun onCreate() {
         super.onCreate()
+
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         if (accelerometer == null) {
@@ -52,11 +76,19 @@ class FallDetectionService : Service() {
             startForegroundService()
             startAccelerometerListener()
         }
+
+        if (!requestSystemAlertWindowPermission()) {
+            showSystemAlertWindow()
+        }
     }
+
+
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
+
+
 
     override fun onDestroy() {
         super.onDestroy()
@@ -64,10 +96,18 @@ class FallDetectionService : Service() {
     }
 
 
-    // Ustawienie Powiadomienia
+
+
+
+
+
+
+
+
+    // notification settings
     private fun startForegroundService() {
         val channelId =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) createNotificationChannel() else ""
+            createNotificationChannel()
 
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Fall Detection Service")
@@ -79,8 +119,7 @@ class FallDetectionService : Service() {
         startForeground(1, notificationBuilder)
     }
 
-
-    // Wyświetla powiadomienie
+    // notification print
     private fun createNotificationChannel(): String {
         val channelId = "fall_detection_channel"
         val channelName = "Fall Detection Service"
@@ -90,18 +129,26 @@ class FallDetectionService : Service() {
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
 
-
         return channelId
     }
 
 
-    // Włącza sensor
+
+
+
+
+
+
+
+
+    // turn the sensor ON
     private fun startAccelerometerListener() {
         sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_NORMAL)
     }
 
 
-    // Ustawienia sensora, aktualnie działa w każdym kierunku.
+
+    // sensor settings
     private val sensorEventListener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent) {
             val x = event.values[0]
@@ -111,7 +158,7 @@ class FallDetectionService : Service() {
             val acceleration = sqrt(x * x + y * y + z * z)
 
             if (acceleration > threshold) {
-                //Jeżeli telefon "upada" wyłącza sensor, wyświetla alert
+                // if phone falls: shows the alert, turns the sensor OFF
                 showFallAlert()
                 sensorManager.unregisterListener(this)
                 stopSelf()
@@ -119,18 +166,26 @@ class FallDetectionService : Service() {
         }
 
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-            //Aktualnie bezużyteczne, ale może się przydać
         }
     }
 
 
-    //Wyświetla Alert
+
+
+
+
+
+
+
+
+    // show alert
     private fun showFallAlert() {
         showSystemAlertWindow()
     }
 
 
-    //Kod do wywołania Alert Boxa
+
+    // show alert
     private fun showSystemAlertWindow() {
         playAlarmSound()
         val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
@@ -153,15 +208,18 @@ class FallDetectionService : Service() {
         val disableButton = systemAlertView?.findViewById<Button>(R.id.disableButton)
 
 
-        // Po prostu timer
-        countdownTimer = object : CountDownTimer(15500, 1000) {
+
+
+
+        // Timer
+        countdownTimer = object : CountDownTimer(timerTime * 1000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 countdownTextView?.text = "Countdown: ${millisUntilFinished / 1000} seconds"
             }
 
             override fun onFinish() {
                 removeSystemAlertWindow()
-                //sendSMS("TEST")
+                sendSMS(text_message)
             }
         }
         countdownTimer?.start()
@@ -175,7 +233,15 @@ class FallDetectionService : Service() {
     }
 
 
-    //Wyłącza alert
+
+
+
+
+
+
+
+
+    // turns the alert OFF
     private fun removeSystemAlertWindow() {
         if (systemAlertView != null) {
             val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
@@ -185,7 +251,10 @@ class FallDetectionService : Service() {
             countdownTimer = null
         }
     }
-    //Przycisk wyłączania Alertu o upadku
+
+
+
+    // turning the alert OFF
     private fun onDisableButtonClick() {
         removeSystemAlertWindow()
         startForegroundService()
@@ -195,8 +264,16 @@ class FallDetectionService : Service() {
 
 
 
+
+
+
+
+
+
+
+    // sends given text message to given phone number
     fun sendSMS(message: String) {
-        val phoneNumber = "531149432"
+        val phoneNumber = phone_number
 
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -210,6 +287,9 @@ class FallDetectionService : Service() {
         }
     }
 
+
+
+    // sends given text message to given phone number
     private fun sendSmsWithPermissionGranted(phoneNumber: String, message: String) {
         val smsManager = SmsManager.getDefault()
         val piSent = PendingIntent.getBroadcast(this, 0, Intent("SMS_SENT"),
@@ -232,34 +312,67 @@ class FallDetectionService : Service() {
         }
     }
 
+
+
+
+
+
+
+
+
+
+    // turns the sound alarm ON
     private fun playAlarmSound() {
         try {
             // Use the media player to play the alarm sound
             mediaPlayer = MediaPlayer.create(this, R.raw.alarm_sound)
 
-            // Check if the version is Android 21 or higher, use setAudioAttributes
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                val audioAttributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
 
-                mediaPlayer?.setAudioAttributes(audioAttributes)
-            } else {
-                // For lower versions, use deprecated setAudioStreamType
-                mediaPlayer?.setAudioStreamType(AudioManager.STREAM_ALARM)
-            }
+            mediaPlayer?.setAudioAttributes(audioAttributes)
 
             // Start the media player
+            mediaPlayer?.isLooping = true
             mediaPlayer?.start()
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
+
+
+
+    // turns the sound alarm OFF
     private fun stopAlarmSound() {
         mediaPlayer?.release()
         mediaPlayer = null
     }
+
+
+
+
+
+
+
+
+
+
+    // grand permission to open alert box
+    private fun requestSystemAlertWindowPermission(): Boolean {
+        if (!Settings.canDrawOverlays(this)) {
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            startActivity(intent)
+            return true
+        }
+        return false
+    }
+
+
+
+
 
 }
 
