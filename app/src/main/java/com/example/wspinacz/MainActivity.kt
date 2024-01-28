@@ -8,6 +8,9 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileReader
 
 class MainActivity : AppCompatActivity() {
 
@@ -20,6 +23,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         var appStatus = true
+
 
         val background = findViewById<LinearLayout>(R.id.main_screaen_background)  // background of the app status
         val turnOnOff = findViewById<Button>(R.id.fall_detection_status_change)  // button status of the app
@@ -37,17 +41,18 @@ class MainActivity : AppCompatActivity() {
             appStatus = !appStatus
 
             if (appStatus) {
+                startFallDetectionService(fallDetectionService)
                 background.setBackgroundColor(ContextCompat.getColor(this, R.color.green))
                 appStatusText.text = "working"
                 turnOnOff.text = "Turn OFF"
-
                 threshold = 40.0f
             }
             else {
+                val serviceIntent = Intent(this, fallDetectionService::class.java)
                 background.setBackgroundColor(ContextCompat.getColor(this, R.color.red))
                 appStatusText.text = "not working"
+                stopService(serviceIntent)
                 turnOnOff.text = "Turn ON"
-
                 threshold = 100000.0f
             }
         }
@@ -64,19 +69,15 @@ class MainActivity : AppCompatActivity() {
 
 
 
-
-
     // starts the fall detection
     private fun startFallDetectionService(fallDetectionService: FallDetectionService) {
         val serviceIntent = Intent(this, fallDetectionService::class.java)
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            // Starting from Android Oreo, use startForegroundService
             startForegroundService(serviceIntent)
         } else {
             startService(serviceIntent)
         }
-
     }
 
 

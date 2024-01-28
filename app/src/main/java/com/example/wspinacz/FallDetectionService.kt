@@ -42,7 +42,6 @@ var threshold = 40.0f  // threshold of the accelerometer
 var timerTime: Long = 30  // countdown time
 var text_message: String = ""  // text message send for given number
 var phone_number: String = ""  // number to which the phone will send the given message
-
 class FallDetectionService : Service() {
 
     private lateinit var sensorManager: SensorManager
@@ -76,10 +75,10 @@ class FallDetectionService : Service() {
             startForegroundService()
             startAccelerometerListener()
         }
-
-        if (!requestSystemAlertWindowPermission()) {
-            showSystemAlertWindow()
-        }
+//
+//        if (!requestSystemAlertWindowPermission()) {
+//            showSystemAlertWindow()
+//        }
     }
 
 
@@ -92,6 +91,7 @@ class FallDetectionService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        stopSelf()
         sensorManager.unregisterListener(sensorEventListener)
     }
 
@@ -108,7 +108,7 @@ class FallDetectionService : Service() {
     private fun startForegroundService() {
         val channelId =
             createNotificationChannel()
-
+        println("dziala")
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Fall Detection Service")
             .setContentText("Running in the background")
@@ -227,6 +227,8 @@ class FallDetectionService : Service() {
         disableButton?.setOnClickListener {
             onDisableButtonClick()
             stopAlarmSound()
+            stopSelf()
+            onCreate()
         }
 
         windowManager.addView(systemAlertView, layoutParams)
@@ -257,11 +259,13 @@ class FallDetectionService : Service() {
     // turning the alert OFF
     private fun onDisableButtonClick() {
         removeSystemAlertWindow()
-        startForegroundService()
         startAccelerometerListener()
         stopAlarmSound()
-    }
+        startForegroundService()
 
+        val restartIntent = Intent(this, FallDetectionService::class.java)
+        startService(restartIntent)
+    }
 
 
 
