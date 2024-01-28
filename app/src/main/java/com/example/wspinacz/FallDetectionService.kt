@@ -3,7 +3,6 @@ package com.example.wspinacz
 import android.app.*
 import android.content.Context
 import android.Manifest
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.PixelFormat
@@ -12,36 +11,27 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.media.AudioAttributes
-import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
-import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.IBinder
 import android.provider.Settings
 import android.telephony.SmsManager
-import android.text.TextWatcher
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
-import android.widget.EditText
 import android.widget.TextView
-import android.widget.Toast
-import androidx.core.app.ActivityCompat
-import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import androidx.core.widget.doAfterTextChanged
 import kotlin.math.sqrt
-import kotlin.properties.Delegates
 
 var threshold = 40.0f  // threshold of the accelerometer
 var timerTime: Long = 30  // countdown time
 var text_message: String = ""  // text message send for given number
 var phone_number: String = ""  // number to which the phone will send the given message
+
 class FallDetectionService : Service() {
 
     private lateinit var sensorManager: SensorManager
@@ -67,6 +57,8 @@ class FallDetectionService : Service() {
     override fun onCreate() {
         super.onCreate()
 
+        requestSystemAlertWindowPermission()
+
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         if (accelerometer == null) {
@@ -75,10 +67,6 @@ class FallDetectionService : Service() {
             startForegroundService()
             startAccelerometerListener()
         }
-//
-//        if (!requestSystemAlertWindowPermission()) {
-//            showSystemAlertWindow()
-//        }
     }
 
 

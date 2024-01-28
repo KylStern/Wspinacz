@@ -150,8 +150,8 @@
                 android:id="@+id/timer_time_set"
                 android:layout_width="60dp"
                 android:layout_height="wrap_content"
-                android:text="40"
-                android:textSize="17sp"
+                android:text=""
+                android:textSize="16sp"
                 android:inputType="number"
                 android:maxLength="5"
                 />
@@ -184,8 +184,8 @@
                 android:id="@+id/phone_number_set"
                 android:layout_width="100sp"
                 android:layout_height="wrap_content"
-                android:text="888906447"
-                android:textSize="17sp"
+                android:text=""
+                android:textSize="16sp"
                 android:inputType="number"
                 android:maxLength="9"
                 />
@@ -218,9 +218,9 @@
                 android:id="@+id/sms_text_set"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Help me. I'm under the water"
-                android:textSize="17sp"
-                android:maxLength="28"
+                android:text=""
+                android:textSize="16sp"
+                android:maxLength="30"
                 />
 
         </LinearLayout>
