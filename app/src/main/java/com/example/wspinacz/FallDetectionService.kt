@@ -50,6 +50,8 @@ class FallDetectionService : Service() {
     private var countdownTimer: CountDownTimer? = null
     private var mediaPlayer: MediaPlayer? = null
 
+    private var fusedLocationClient: FusedLocationProviderClient? = null
+
 
     companion object {
         const val REQUEST_CODE = 123
@@ -68,6 +70,7 @@ class FallDetectionService : Service() {
         super.onCreate()
 
         requestSystemAlertWindowPermission()
+
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
@@ -206,6 +209,12 @@ class FallDetectionService : Service() {
 
 
 
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        getLastLocation { location ->
+            text_message += location
+//            println(text_message)
+        }
+
 
 
         // Timer
@@ -216,17 +225,18 @@ class FallDetectionService : Service() {
 
             override fun onFinish() {
                 removeSystemAlertWindow()
-
 //                sendSMS(text_message)
+//                stopSelf()
             }
         }
         countdownTimer?.start()
 
         disableButton?.setOnClickListener {
-            onDisableButtonClick()
             stopAlarmSound()
+            removeSystemAlertWindow()
             stopSelf()
-            onCreate()
+            val restartIntent = Intent(this, FallDetectionService::class.java)
+            startService(restartIntent)
         }
 
         windowManager.addView(systemAlertView, layoutParams)
@@ -250,19 +260,6 @@ class FallDetectionService : Service() {
             countdownTimer?.cancel()
             countdownTimer = null
         }
-    }
-
-
-
-    // turning the alert OFF
-    private fun onDisableButtonClick() {
-        removeSystemAlertWindow()
-        startAccelerometerListener()
-        stopAlarmSound()
-        startForegroundService()
-
-        val restartIntent = Intent(this, FallDetectionService::class.java)
-        startService(restartIntent)
     }
 
 
@@ -374,6 +371,29 @@ class FallDetectionService : Service() {
     }
 
 
+
+
+
+
+
+
+
+
+    @SuppressLint("MissingPermission")
+    private fun getLastLocation(callback: (String) -> Unit) {
+        var coordinates: String? = ""
+        fusedLocationClient?.lastLocation!!.addOnCompleteListener { task ->
+            if (task.isSuccessful && task.result != null) {
+                val lastLocation = task.result
+                coordinates =
+                    ", my coordinates: ${(lastLocation)!!.latitude}, ${(lastLocation)!!.longitude}"
+                callback(coordinates ?: "")
+            } else {
+                Log.w(TAG, "getLastLocation:exception", task.exception)
+                callback("")
+            }
+        }
+    }
 
 
 

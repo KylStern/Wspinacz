@@ -2,6 +2,7 @@ package com.example.wspinacz
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.ContentValues.TAG
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -20,6 +21,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.wspinacz.FallDetectionService.Companion.REQUEST_CODE
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.gson.Gson
@@ -29,22 +31,13 @@ import kotlinx.coroutines.*
 
 
 class MainActivity : AppCompatActivity() {
-    private var fusedLocationClient: FusedLocationProviderClient? = null
-//    private var lastLocation: Location? = null
-//    private var coordinates: String = ""
-
-
+    val fallDetectionService = FallDetectionService()  // creates an object detecting fall
 
 
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
-
-
         setContentView(R.layout.activity_main)
 
         var appStatus = true  // ON / OFF
@@ -54,14 +47,9 @@ class MainActivity : AppCompatActivity() {
         val appStatusText = findViewById<TextView>(R.id.fall_detection_status)  // text status of the app
         val apply = findViewById<Button>(R.id.settings_apply)  // button apply settings
 
+        checkLocationPermission()
         loadSettings()
-//        val x = getLastLocation()
-//        println(x)
-
-
-        val fallDetectionService = FallDetectionService()  // creates an object detecting fall
         startFallDetectionService(fallDetectionService)  // Start the FallDetectionService
-
 
         // changes texts and colors of the app status segment
         turnOnOff.setOnClickListener{
@@ -95,11 +83,6 @@ class MainActivity : AppCompatActivity() {
             loadSettings()
         }
 
-
-
-
-
-
     }
 
 
@@ -131,7 +114,11 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-
+    override fun onDestroy() {
+        val serviceIntent = Intent(this, fallDetectionService::class.java)
+        stopService(serviceIntent)
+        super.onDestroy()
+    }
 
 
     // loads users settings
@@ -172,46 +159,31 @@ class MainActivity : AppCompatActivity() {
 
 
 
-//    @SuppressLint("MissingPermission")
-//    private fun getLastLocation(): String? {
-//        var coordinates: String? = ""
-//        fusedLocationClient?.lastLocation!!.addOnCompleteListener(this) { task ->
-//            if (task.isSuccessful && task.result != null) {
-//                val lastLocation = task.result
-//                coordinates = ", my coordinates: ${(lastLocation)!!.latitude}, ${(lastLocation)!!.longitude}"
-//                println(coordinates)
-//
-//            }
-//            else {
-//                Log.w(TAG, "getLastLocation:exception", task.exception)
-//            }
-//        }
-//        return coordinates
+    // checks if the app has permission to get phones location
+    private fun checkLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            // Permission already granted
+        } else {
+            // Request permission
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_CODE)
+        }
+    }
 
 
 
-
-
-//        var coordinates: String? = ""
-//        val task = fusedLocationClient?.lastLocation
-//        if (task != null) {
-//            task.addOnCompleteListener { task ->
-//                if (task.isSuccessful && task.result != null) {
-//                    val lastLocation = task.result
-//                    coordinates = ", my coordinates: ${(lastLocation)!!.latitude}, ${(lastLocation)!!.longitude}"
-//                }
-//                else {
-//                    Log.w(TAG, "getLastLocation:exception", task.exception)
-//                }
-//            }
-//            // Wait until the task is completed
-////            task.await()
-//        }
-//        return coordinates
-//    }
-
-
-
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Permission granted, proceed with location-related tasks
+                } else {
+                    // Permission not granted
+                    Toast.makeText(this, "location permission is necessary for sending GPS coordinates ", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
 
 
