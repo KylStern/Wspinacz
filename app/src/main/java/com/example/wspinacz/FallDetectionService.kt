@@ -3,6 +3,9 @@ package com.example.wspinacz
 import android.app.*
 import android.content.Context
 import android.Manifest
+import android.annotation.SuppressLint
+import android.content.ContentValues
+import android.content.ContentValues.TAG
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.PixelFormat
@@ -10,6 +13,8 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.location.Location
+import android.location.LocationManager
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.net.Uri
@@ -18,13 +23,18 @@ import android.os.CountDownTimer
 import android.os.IBinder
 import android.provider.Settings
 import android.telephony.SmsManager
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import kotlin.math.sqrt
 
 var threshold = 40.0f  // threshold of the accelerometer
@@ -96,7 +106,6 @@ class FallDetectionService : Service() {
     private fun startForegroundService() {
         val channelId =
             createNotificationChannel()
-        println("dziala")
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Fall Detection Service")
             .setContentText("Running in the background")
@@ -207,7 +216,8 @@ class FallDetectionService : Service() {
 
             override fun onFinish() {
                 removeSystemAlertWindow()
-                sendSMS(text_message)
+
+//                sendSMS(text_message)
             }
         }
         countdownTimer?.start()
@@ -275,7 +285,7 @@ class FallDetectionService : Service() {
             // Permission already granted, proceed with sending SMS
             sendSmsWithPermissionGranted(phoneNumber, message)
         } else {
-            println("Do zaimplementowania")
+            println("need sms permission")
         }
     }
 
@@ -288,6 +298,7 @@ class FallDetectionService : Service() {
             PendingIntent.FLAG_IMMUTABLE)
         val piDelivered = PendingIntent.getBroadcast(this, 0, Intent("SMS_DELIVERED"),
             PendingIntent.FLAG_IMMUTABLE)
+
 
         // Split the message into parts if it's too long
         val parts = smsManager.divideMessage(message)
@@ -361,6 +372,11 @@ class FallDetectionService : Service() {
         }
         return false
     }
+
+
+
+
+
 
 
 
